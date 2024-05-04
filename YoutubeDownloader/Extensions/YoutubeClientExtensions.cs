@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using YoutubeDownloader.BaseClass;
 using YoutubeExplode;
+using YoutubeExplode.Videos.Streams;
 
 namespace YoutubeDownloader.Extensions
 {
@@ -55,6 +56,41 @@ namespace YoutubeDownloader.Extensions
                     }
 
                     // Crear un objeto VideoDescargado con los datos relevantes y devolverlo
+                    return new DownloadedVideo(sanitizedTitle, videoUrl, streamInfo.Container.ToString(), DateTime.Now, outputFilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error downloading video: {ex.Message}");
+            }
+        }
+        public static async Task<DownloadedVideo> DownloadMP3Async(this YoutubeClient youtube, string videoUrl, string outputDirectory)
+        {
+            try
+            {
+                var video = await youtube.Videos.GetAsync(videoUrl);
+                if (video == null)
+                    throw new InvalidOperationException("Video not found.");
+
+                // Sanitize the video title to remove invalid characters from the file name
+                string sanitizedTitle = string.Join("_", video.Title.Split(Path.GetInvalidFileNameChars()));
+
+                // Get all available muxed streams
+                var streamManifest = await youtube.Videos.Streams.GetManifestAsync(video.Id);
+                var streamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
+
+                using (var httpClient = new HttpClient())
+                {
+                    var stream = await httpClient.GetStreamAsync(streamInfo.Url);
+                    // Verificar si el directorio de salida existe, si no, crearlo
+                    if (!Directory.Exists(outputDirectory))
+                        Directory.CreateDirectory(outputDirectory);
+                    
+                    
+                    string outputFilePath = Path.Combine(outputDirectory, $"{sanitizedTitle}.{Container.Mp3}");
+                    using (var outputStream = File.Create(outputFilePath))
+                        await stream.CopyToAsync(outputStream);
+                    // Crear un objeto VideoDescargado con los datos
                     return new DownloadedVideo(sanitizedTitle, videoUrl, streamInfo.Container.ToString(), DateTime.Now, outputFilePath);
                 }
             }

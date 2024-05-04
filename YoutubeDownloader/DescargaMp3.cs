@@ -4,9 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,34 +12,29 @@ using System.Windows.Forms;
 using YoutubeDownloader.BaseClass;
 using YoutubeDownloader.Extensions;
 using YoutubeExplode;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace YoutubeDownloader
 {
-    public partial class Form1 : Form
+    public partial class DescargaMp3 : Form
     {
         #region Vars
-
+       
         // Set the output directory path here
         string outputDirectory = @"";
 
         // List of YouTube video URLs to download
-        List<Encolado> colaUrls = new List<Encolado>
-        {
-            new Encolado ("https://www.youtube.com/watch?v=YT8rY_o5VhY&ab_channel=ZeeMusicCompany", "Video 1"),
-            new Encolado ("https://www.youtube.com/watch?v=HFX6AZ5bDDo&ab_channel=ZeeMusicCompany", "Video 2")
-        };
+        List<Encolado> colaUrls = new List<Encolado>();
 
         List<DownloadedVideo> downloadscompleted = new List<DownloadedVideo>();
-       
+
         YoutubeClient youtube = new YoutubeClient();
-        
+
         SemaphoreSlim semaphore = new SemaphoreSlim(1);
 
 
         #endregion
 
-        public Form1()
+        public DescargaMp3()
         {
             InitializeComponent();
             //Cargando preferencias iniciales de los grids
@@ -51,6 +44,8 @@ namespace YoutubeDownloader
             dataGridView1.Mostrar(colaUrls.EncoladoToView());
             dataGridView2.Mostrar(downloadscompleted.DownloadedVideoToView());
         }
+
+        #region Buttons
 
         //Boton descarga
         private void button1_Click(object sender, EventArgs e)
@@ -88,18 +83,22 @@ namespace YoutubeDownloader
             SelectDirectory();
         }
 
+        #endregion
+
+        #region Descarga
+
         private async void DescargarVideosAsync()
         {
             while (true)
             {
                 // Esperar un  tiempo antes de revisar la cola 
-                await Task.Delay(1000); 
+                await Task.Delay(1000);
                 // Copiar la lista actual de URLs para evitar problemas de concurrencia
                 List<Encolado> urlsParaDescargar;
                 lock (colaUrls)
                 {
                     urlsParaDescargar = new List<Encolado>(colaUrls);
-                    colaUrls.Clear(); 
+                    colaUrls.Clear();
                 }
 
                 foreach (var itemurl in urlsParaDescargar)
@@ -108,7 +107,7 @@ namespace YoutubeDownloader
                     {
                         UpdateStatusLabel(label2, $"Descargando {itemurl.Nombre}");
                         await semaphore.WaitAsync();
-                        var response = await youtube.DownloadYouTubeVideoAsync(itemurl.Url, outputDirectory);
+                        var response = await youtube.DownloadMP3Async(itemurl.Url, outputDirectory);
                         downloadscompleted.Add(response);
                     }
                     catch (Exception ex)
@@ -173,7 +172,7 @@ namespace YoutubeDownloader
             }
         }
 
-        private async Task< List<Encolado>> ObtenerUrls() 
+        private async Task<List<Encolado>> ObtenerUrls()
         {
             var encolados = new List<Encolado>();
             //Obtengo texto del portapapeles
@@ -187,6 +186,7 @@ namespace YoutubeDownloader
             }
             return encolados;
         }
+
+        #endregion
     }
 }
-

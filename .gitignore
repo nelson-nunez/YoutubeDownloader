@@ -1,3 +1,5 @@
 YoutubeDownloader/bin/
 YoutubeDownloader/obj/
 packages/
+*.suo
+.vs/
